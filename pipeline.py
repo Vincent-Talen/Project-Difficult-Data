@@ -16,13 +16,15 @@ Other:
 
 # METADATA VARIABLES
 __author__ = "M. Hagen, R. Meulenkamp, J. Numan, V. Talen and R. Visser"
-__status__ = "Template"
+__status__ = "Development"
 __date__ = "02-12-2020"
 __version__ = "v0.1"
 
 # IMPORTS
 import sys
 import argparse
+from math import ceil
+from multiprocessing import cpu_count
 
 from lib.alignment import Alignment
 from lib.count_matrix import create_count_matrix
@@ -43,11 +45,28 @@ def create_parser():
 
     :return:    an object containing all arguments
     """
-    # Create parser and add arguments
-    parser = argparse.ArgumentParser(description="Align data, check if the data is of quality",
+    # Create parser
+    parser_desc = "Pipeline used for aligning and quality checking data." \
+                  "Multiple reports will be generated about the quality including " \
+                  "probable explanations if quality is bad."
+    parser = argparse.ArgumentParser(description=parser_desc,
                                      epilog="Thanks for using our pipeline!")
-    parser.add_argument('-f', '--files', help='Directory with files or file name')
-    # TODO: Add all necessary arguments
+
+    # Add arguments
+    parser.add_argument("-f", "--files", required=True,
+                        help="Directory with files or file name")
+    parser.add_argument("-o", "--organism", required=True,
+                        help="The organism whose genome needs to be aligned")
+    parser.add_argument("-d", "--directory_out", required=True,
+                        help="Directory where all the files need to be saved.")
+    parser.add_argument("-p", "--paired", required=False, action='store_true',
+                        help="Only use this when you want to use paired-end sequencing!"
+                             "If you don't give this argument it will use single end")
+    parser.add_argument("-t", "--trim", required=False,
+                        help="Define the last bp to keep for trimming")
+    parser.add_argument("-c", "--cores", required=False, default=ceil((2/3)*cpu_count()),
+                        help="Define the number of cores to be used (optional)"
+                             "(Defaults to two-thirds of the systems amount)")
 
     args = parser.parse_args()  # Collect the arguments/values
     return args
@@ -64,21 +83,21 @@ def main():
     args = create_parser()
 
     # Create needed directories to save (temporary) files
-    CreateDirectories()
+    CreateDirectories(args.directory_out)
     # Gather all the files the pipeline needs to be run on
     files = collect_files(args.files)
     # Collect the reference data related to the organism that was inputted
-    collect_genome_info()
+    collect_genome_info(args.organism)
 
     # Run FastQC tool on all files to create reports of quality
-    QualityCheck()
+    QualityCheck(files)
     # Trim the data. (Adapter/primer)
-    Trimmer()
+    Trimmer(args.trim)
     # Picard fasta processing
     FastaProcessor()
 
     # Perform actual alignment to create BAM maps (with genomeHiSat2)
-    Alignment()
+    Alignment(args.paired, args.cores)
     # Preprocessing all the mapped data
     PreProcess()
 
