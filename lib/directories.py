@@ -19,19 +19,19 @@ import os
 
 # FUNCTIONS
 def build_outputdir(outputdir):
-    '''
+    """
     Check if the output directory already exists, otherwise create it.
-    '''
+    """
     if not os.path.exists(outputdir):
         os.makedirs(outputdir)
 
 
 def extend_outputdir(outputdir):
-    '''
+    """
     Check if the preprocessing folder already exists, if this is not the
     case. Create this directory.
     Add timmed, aligned, sortedBam, addOrReplace, mergeSam and markDuplicates folders
-    '''
+    """
     if not os.path.exists(outputdir + "/Preprocessing/"):
         os.makedirs(outputdir + "/Preprocessing/")
         os.makedirs(outputdir + "/Preprocessing/trimmed")
@@ -43,10 +43,10 @@ def extend_outputdir(outputdir):
 
 
 def create_resultdir(outputdir):
-    '''
+    """
     Check if the results directory exists, otherwise create it.
     Add alignment, fastQC, multiQC and finalPDF folders.
-    '''
+    """
     if not os.path.exists(outputdir + "/Results/"):
         os.makedirs(outputdir + "/Results/")
         os.makedirs(outputdir + "/Results/alignment")
@@ -56,10 +56,10 @@ def create_resultdir(outputdir):
 
 
 def create_datadir(outputdir):
-    '''
+    """
     Check if the Data directory exists, otherwise create it.
     Add fastqfiles and counts folders.
-    '''
+    """
     if not os.path.exists(outputdir + "/Data/"):
         os.makedirs(outputdir + "/Data/")
         os.makedirs(outputdir + "/Data/fastqFiles")
@@ -68,7 +68,7 @@ def create_datadir(outputdir):
 
 def create_alldirs(outputdir):
     """
-    main function to create all directories
+    Main function to create all directories
     """
     build_outputdir(outputdir)
     extend_outputdir(outputdir)
