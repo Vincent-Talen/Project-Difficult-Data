@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 """
-this python script creates several directories for the other python scripts to use.
-before creating the directories it checks if they already exist.
+This python script creates several directories for the other python scripts to use.
+Before creating the directories it checks if they already exist.
 There is a directory for the preprocessing, a directory for the data and a directory for the results.
-for the main function createAllDirs to be called, an output directory must be given as an argument.
+For the main function createAllDirs to be called, an output directory must be given as an argument.
 """
 
 # METADATA VARIABLES
