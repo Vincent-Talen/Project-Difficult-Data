@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 """
-This module is now under development
-
 The module is to be used between the
 """
 
@@ -10,7 +8,7 @@ The module is to be used between the
 __author__ = "Vincent Talen"
 __status__ = "Development"
 __date__ = "04-12-2020"
-__version__ = "v0.1"
+__version__ = "v0.2"
 
 # IMPORTS
 import sys
@@ -23,6 +21,7 @@ class PreProcess:
         pass
 
     def preprocess(self):
+        """Perform the actual thingemedong"""
         # Picard SortSam (creates sorted bam alignment)
         # Picard AddOrReplaceReadGroups (processed bam alignment)
         # Picard FixMateInformation
