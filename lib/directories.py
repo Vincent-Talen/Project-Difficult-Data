@@ -9,9 +9,9 @@ for the main function createAllDirs to be called, an output directory must be gi
 
 # METADATA VARIABLES
 __author__ = "Joost Numan"
-__status__ = "functioning"
+__status__ = "Development"
 __date__ = "04-12-2020"
-__version__ = "v0.1.1"
+__version__ = "v0.2"
 
 # IMPORTS
 import os
