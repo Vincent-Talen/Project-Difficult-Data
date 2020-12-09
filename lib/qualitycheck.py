@@ -1,42 +1,47 @@
 #!/usr/bin/env python3
 
 """
-execute quality check for every fastq.gz file in the directory.
+Execute quality check for every fastq.gz file from the input directory.
+Put the reports into the given output directory.
+Containing a zip and html file.
+
+Fastqc function needs 3 parameters:
+fastq_dir = Input directory with the raw data.
+fastqc_dir = Output directory for the reports.
+threads = The number of files to process.
 """
 
+
 __author__ = "Rob Meulenkamp"
-__status__ = "template"
+__status__ = "Development"
 __date__ = "02-12-2020"
-__version__ = "v1"
+__version__ = "v0.2"
 
 
-import os
+import subprocess
 import sys
-import argparse
 
 
-def fastqc(fastq_dir, fastqc_dir):
-    """prepared the data for the fastqc tool."""
+def fastqc(fastq_dir, fastqc_dir, threads):
+    """Performs the fastqc tool for all the fastq.gz files."""
 
-    query = 'fastqc --casava {}*fastq.gz -o={}'.format(fastq_dir, fastqc_dir)
-                                                            # 'fastq_dir' directory waar de *fastq.gz staan.
-    os.system(query)                                        # '-o=' plek van output directory.
+    query = 'fastqc --casava {}*fastq.gz -o={} -t {}'.format(fastq_dir, fastqc_dir, threads)
+
+    subprocess.run(query, shell=True)
 
     return 0
 
 
-def main(args):
+def main():
     """execute the programm"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("fastq", help="Give the directory to the fastq.gz files.")
-    parser.add_argument("fastqc", help="Give the output directory to the fastqc report(s).")
-    arg = parser.parse_args()
-    fastq_dir = arg.fastq
-    fastqc_dir = arg.fastqc
-    fastqc(fastq_dir, fastqc_dir)
+    #Temporary variables
+    fastq_dir = ""
+    fastqc_dir = ""
+    threads = ""
+    fastqc(fastq_dir, fastqc_dir, threads)
 
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
