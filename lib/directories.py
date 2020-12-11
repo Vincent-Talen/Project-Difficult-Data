@@ -40,6 +40,7 @@ def extend_outputdir(outputdir):
         os.makedirs(outputdir + "/Preprocessing/addOrReplace")
         os.makedirs(outputdir + "/Preprocessing/mergeSam")
         os.makedirs(outputdir + "/Preprocessing/markDuplicates")
+        os.makedirs(outputdir + "/Preprocessing/toolLogs")
 
 
 def create_resultdir(outputdir):
