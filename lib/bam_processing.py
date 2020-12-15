@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 
 """
-The module is to be used between the
+The is a module that contains a class performing all the processing of a bam file.
+It takes the output directory as argument and collects aligned BAM files
+and sorts, groups, fixes and marks duplicate reads.
+Every file will be created into a process and multiple will run at the same time.
+To use simply import the BamProcessing class and create an object with it with the output directory.
 """
 
 # METADATA VARIABLES
 __author__ = "Vincent Talen"
 __status__ = "Development"
-__date__ = "10-12-2020"
-__version__ = "v0.3.4"
+__date__ = "15-12-2020"
+__version__ = "v0.4.3"
 
 # IMPORTS
 import sys
@@ -16,9 +20,10 @@ from glob import glob
 from pathlib import Path
 from subprocess import run
 from termcolor import colored
+from concurrent.futures import ProcessPoolExecutor
 
 
-class PreProcess:
+class BamProcessing:
     def __init__(self, output_dir):
         """
         Constructor for the PreProcess class
@@ -26,8 +31,10 @@ class PreProcess:
         :param output_dir: The directory the user gave for all the output files to be saved in
         """
         self.working_dir = f"{output_dir}/Preprocessing"
+        self.files = self.gather_files()
+        self.preprocess_files()
 
-    def _gather_files(self):
+    def gather_files(self):
         """
         This method gathers all the .BAM files in the given output directory.
 
@@ -37,34 +44,6 @@ class PreProcess:
         for aligned_file in glob(f"{self.working_dir}/aligned/*.bam"):
             files.append(Path(aligned_file).stem)  # Path.stem collects the name without extension
         return files
-
-    @staticmethod
-    def save_tool_log(output, log_file_name):
-        """
-        Small method saving the log of a tool to a file.
-
-        :param output: The output from the tool that needs to be saved
-        :param log_file_name: The name of the file the output needs to be saved in
-        """
-        with open(log_file_name, "w") as opened_log_file:
-            print(output, file=opened_log_file)
-
-    def run_tool(self, current_file, tool_name, query):
-        """
-        This method can be used to run a tool/process, it calls it through the command line.
-
-        :param current_file: The file this tool needs to be run on
-        :param tool_name: The tool that needs to be executed
-        :param query: The query used to execute the tool
-        """
-        print(colored(f"\tStarting {tool_name} for {current_file}", "cyan"))
-        executed_process = run(query, capture_output=True, text=True)
-
-        # TODO: Make the logfiles working (doesn't save the outputs yet)
-        save_tool_dir = f"{self.working_dir}/toolLogs/{current_file}"
-        self.save_tool_log(executed_process.stdout, f"{save_tool_dir}_{tool_name}.txt")
-        done_string = colored(f"{tool_name} for {current_file} finished.", "green")
-        print(f"\t{done_string} Saved logfile {current_file}_{tool_name}.txt")
 
     def process_file(self, current_file):
         """
@@ -117,22 +96,50 @@ class PreProcess:
                       "-o", f"{self.working_dir}/markDuplicates/{current_file}_sorted.bam"]
         self.run_tool(current_file, "SamtoolsSort", final_sort)
 
-    def preprocess_files(self):
-        """This method is for processing multiple files at once, it uses the process_file method."""
-        aligned_files = self._gather_files()
+    def run_tool(self, current_file, tool_name, query):
+        """
+        This method can be used to run a tool/process, it calls it through the command line.
 
-        # TODO: Make it use multithreading
-        for file in aligned_files:
-            self.process_file(file)
+        :param current_file: The file this tool needs to be run on
+        :param tool_name: The tool that needs to be executed
+        :param query: The query used to execute the tool
+        """
+        print(colored(f"\t[{current_file}] {tool_name} started.", "cyan"))  # Say the tool started
+        executed_process = run(query, capture_output=True, text=True)  # Run the tool
+
+        save_tool_dir = f"{self.working_dir}/toolLogs/{current_file}"
+        save_tool_log(executed_process, f"{save_tool_dir}_{tool_name}.txt")  # Save tool logs
+
+        done_string = colored(f"[{current_file}] {tool_name} finished", "green")
+        print(f"\t{done_string} Saved logfile {current_file}_{tool_name}.txt")  # Say tool finished
+
+    def preprocess_files(self):
+        """
+        This method processes multiple files at once with multiprocessing.
+        Every file gets preprocessed with the process_file method.
+        """
+        with ProcessPoolExecutor() as executor:
+            executor.map(self.process_file, self.files)
+
+
+def save_tool_log(finished_process, log_file_name):
+    """
+    Small function that saves the logs of a tool to a file.
+
+    :param finished_process: The finished process we want to save the outputs/errors from
+    :param log_file_name: The name of the file the output needs to be saved in (with directory)
+    """
+    with open(log_file_name, "w") as opened_log_file:
+        opened_log_file.write(finished_process.stdout)
+        opened_log_file.write(finished_process.stderr)
 
 
 # MAIN
 def main():
     """Main function calling forth all tasks"""
-    print("Preprocessing files...")
-    pp = PreProcess("../output")
-    pp.preprocess_files()
-    print("Done preprocessing all files")
+    print("Processing bam files...")
+    BamProcessing("../output")
+    print("Done processing all bam files")
     return 0
 
 
