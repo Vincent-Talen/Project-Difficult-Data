@@ -12,7 +12,7 @@ The results will be written to the outputdirectory/Results/multiQC directory
 __author__ = "Joost Numan"
 __status__ = "Development"
 __date__ = "09-12-2020"
-__version__ = "v0.2"
+__version__ = "v0.2.1"
 
 
 # IMPORTS
@@ -26,7 +26,7 @@ def perform_multiqc(outputdir):
     this function creates a query for running the multiQC tool
     the query is run in the terminal by using subprocess.run()
     """
-    query = "multiqc {} -o {}Results/multiQC".format(outputdir, outputdir)
+    query = "multiqc {} -o {}/Results/multiQC".format(outputdir, outputdir)
     subprocess.run(query.split())
 
 
