@@ -8,7 +8,7 @@ downloads the genome fasta and gtf file and the indexes for the Hisat2 tool.
 __author__ = "Rob Meulenkamp"
 __status__ = "Development"
 __date__ = "06-01-2021"
-__version__ = "v0.2"
+__version__ = "v0.3"
 
 import sys
 import os
@@ -97,9 +97,10 @@ def fastaprocessing(dir_fa_gtf):
         return 0
 
 
-def execute(dir_fa_gtf):
+def execute(outputDir):
     """execute multiple functions"""
-    dir_hisat = 'genome/hisat2/'
+    dir_hisat = outputDir + '/genome/hisat2/'
+    dir_fa_gtf = outputDir + '/genome/'
     hisat_index(dir_hisat)
     genome_rtf(dir_fa_gtf)
     human_genome_file(dir_fa_gtf)
@@ -108,8 +109,8 @@ def execute(dir_fa_gtf):
 
 def main():
     """main function"""
-    dir_fa_gtf = 'genome/'
-    execute(dir_fa_gtf)
+    outputDir = ''
+    execute(outputDir)
 
     return 0
 
