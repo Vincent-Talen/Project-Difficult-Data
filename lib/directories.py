@@ -10,7 +10,7 @@ For the main function createAllDirs to be called, an output directory must be gi
 # METADATA VARIABLES
 __author__ = "Joost Numan"
 __status__ = "Development"
-__date__ = "04-12-2020"
+__date__ = "12-01-2021"
 __version__ = "v0.2"
 
 # IMPORTS
@@ -65,6 +65,8 @@ def create_datadir(outputdir):
         os.makedirs(outputdir + "/Data/")
         os.makedirs(outputdir + "/Data/fastqFiles")
         os.makedirs(outputdir + "/Data/counts")
+        os.makedirs(outputdir + "/Data/genome")
+        os.makedirs(outputdir + "/Data/genome/hisat2")
 
 
 def create_alldirs(outputdir):
