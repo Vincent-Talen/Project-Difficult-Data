@@ -1,117 +1,142 @@
 #!/usr/bin/env python3
 
 """
-downloads the genome fasta and gtf file and the indexes for the Hisat2 tool.
-
+This module will check if the required genome data files are present in the output directory
+and if they aren't it will download them.
+The fasta file will also be
 """
 
-__author__ = "Rob Meulenkamp"
+# METADATA VARIABLES
+__author__ = "Rob Meulenkamp and Vincent Talen"
 __status__ = "Development"
-__date__ = "06-01-2021"
-__version__ = "v0.3"
+__date__ = "15-01-2021"
+__version__ = "v0.4.4"
 
+# IMPORTS
 import sys
 import os
 import subprocess as sub
 
 
-def hisat_index(dir_hisat):
-    """downloads the hisat indexes"""
-    # Dowloanden gaat op basis in welke directory je staat.
-    # De indexes voor de hisat tool wordt in een mapje gestopt genaamd 'grch38'.
-    # Directory moet bestaan anders breekt hij de pipeline af.
-    dir_hisat_file = '{}grch38_genome.tar.gz'.format(dir_hisat)
-    in_query = "wget", "-c", "https://genome-idx.s3.amazonaws.com/hisat/grch38_genome.tar.gz", "-O", "-"
-    out_query = "tar", "-xz", "-C", dir_hisat
-    if not os.path.isfile(dir_hisat_file):
-        try:
-            hisat2 = sub.Popen(in_query,
-                               stdout=sub.PIPE)
-            sub.check_output(out_query, stdin=hisat2.stdout)
-            hisat2.wait()
-        except sub.CalledProcessError as e:
-            print("Oeps, there went something wrong! Check if the directory exists.\n{}".format(e))
-    else:
-        print("Indexes for the hisat tool are already in the directory")
-    return 0
+# FUNCTIONS
+def fix_output_dir(output_dir):
+    """
+    This is a small function that puts the output directory in the correct format
+
+    :param output_dir: The output_dir the files need to be put in
+    :result: The output directory that is in the correct format
+    """
+    if output_dir.startswith("/"):
+        output_dir = output_dir[1:]
+
+    # Add the suffix this module needs
+    output_dir += "/genome/"
+    return output_dir
 
 
-def human_genome_file(dir_fa_gtf):
-    """downloads fasta file and unzipped the file"""
-    dir_fa_file = '{}Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz'.format(dir_fa_gtf)
-    query = ["wget", "ftp://ftp.ensembl.org/pub/release-84/fasta/"
-                     "homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz", "-P", dir_fa_gtf]
+def collect_hisat_index(output_dir):
+    """
+    This function downloads the HISAT index if it does not exist yet and removes compression.
+
+    :param output_dir: The output directory where the file needs to be saved
+    """
+    hisat_dir = output_dir + 'hisat2'
+    hisat_file_name = f"{hisat_dir}/grch38_genome.tar.gz"
+
+    query = ["wget", "-c", "-O", "-",
+             "https://genome-idx.s3.amazonaws.com/hisat/grch38_genome.tar.gz",
+             "|", "tar", "-x", "-C", hisat_dir]
+    if not os.path.isfile(hisat_file_name):
+        sub.run(query)
+
+
+def collect_human_genome_file(output_dir):
+    """
+    This function downloads the human genome fasta reference file and removes compression.
+
+    :param output_dir: The output directory where the file needs to be saved
+    """
+    dir_fa_file = '{}Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz'.format(output_dir)
+
+    query = ["wget", "ftp://ftp.ensembl.org/pub/release-84/fasta/homo_sapiens/dna/"
+                     "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz", "-P", output_dir]
     query_2 = ["gunzip", dir_fa_file]
     if not os.path.isfile(dir_fa_file):
-        try:
-            sub.run(query)
-            sub.run(query_2)
-        except sub.CalledProcessError as e:
-            print("Oeps, there went something wrong! Check if the directory exists.\n{}".format(e))
-    else:
-        print('the fasta file is already in your given directory.')
-
-    return 0
+        sub.run(query)
+        sub.run(query_2)
 
 
-def genome_rtf(dir_fa_gtf):
-    """downloads gtf file and unzipped the file"""
-    dir_gtf_file = '{}Homo_sapiens.GRCh38.84.gtf.gz'.format(dir_fa_gtf)
-    query = ["wget", "ftp://ftp.ensembl.org/pub/release-84/gtf/homo_sapiens/Homo_sapiens.GRCh38.84.gtf.gz",
-             "-P", dir_fa_gtf]
+def collect_genome_rtf(output_dir):
+    """
+    This function will check if the genome rtf file is existent and otherwise download it.
+
+    :param output_dir: The output directory where the file needs to be saved
+    """
+    dir_gtf_file = f"{output_dir}Homo_sapiens.GRCh38.84.gtf.gz"
+
+    query = ["wget", "ftp://ftp.ensembl.org/pub/release-84/gtf/homo_sapiens/"
+                     "Homo_sapiens.GRCh38.84.gtf.gz", "-P", output_dir]
     query_2 = ["gunzip", dir_gtf_file]
+
     if not os.path.isfile(dir_gtf_file):
-        try:
-            sub.run(query)
-            sub.run(query_2)
-        except sub.CalledProcessError as e:
-            print("Oeps, there went something wrong! Check if the directory exists.\n{}".format(e))
-    else:
-        print('The gtf file is already in your given directory.')
-    return 0
+        sub.run(query)
+        sub.run(query_2)
 
 
-def fastaprocessing(dir_fa_gtf):
-    """create indexed reference genomes"""
+def fasta_processing(output_dir):
+    """
+    Creates the fasta dictionary and fai files with the Picard tool.
+
+    :param output_dir: The output directory where the file needs to be saved
+    """
     file_name_dict = "Homo_sapiens.GRCh38.dna.primary_assembly.dict"
     file_name_fai = "Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai"
-    dir_fa_file = '{}Homo_sapiens.GRCh38.dna.primary_assembly.fa'.format(dir_fa_gtf)
+    dir_fa_file = f"{output_dir}Homo_sapiens.GRCh38.dna.primary_assembly.fa"
     picard_tool = "lib/Picard_2.23.9/picard.jar"
-    query_dict = ["java", "-jar", picard_tool, "CreateSequenceDictionary", "R=" + dir_fa_file,
-                  "O=" + dir_fa_gtf + file_name_dict]
+
+    query_dict = ["java", "-jar", picard_tool, "CreateSequenceDictionary",
+                  f"R={dir_fa_file}", f"O={output_dir}{file_name_dict}"]
     query_fai = ["samtools", "faidx", dir_fa_file]
+
     # It is determined if the fasta.dict has been created already
-    if not os.path.isfile(dir_fa_gtf + file_name_dict):
+    if not os.path.isfile(output_dir + file_name_dict):
         # If this is not the case, the file will be created
         sub.run(query_dict)
 
-    else:
-        print('The dict file is already in your given directory.')
     # It is determined if the fasta.fa.fai has been created already
-    if not os.path.isfile(dir_fa_gtf + file_name_fai):
+    if not os.path.isfile(output_dir + file_name_fai):
         # If this is not the case, the file will be created
         sub.run(query_fai)
-    else:
-        print('The fa.fai file is already in your given directory.')
-
-        return 0
 
 
-def execute(outputDir):
-    """execute multiple functions"""
-    dir_hisat = outputDir + '/genome/hisat2/'
-    dir_fa_gtf = outputDir + '/genome/'
-    hisat_index(dir_hisat)
-    genome_rtf(dir_fa_gtf)
-    human_genome_file(dir_fa_gtf)
-    fastaprocessing(dir_fa_gtf)
+def collect_all_genome_info(output_dir):
+    """
+    This function this is the function that can be called
+    to collect all the genome data with other the other functions.
+
+    :param output_dir: The output directory where the file needs to be saved
+    :return: A list with the names of the three files
+    """
+    output_dir = fix_output_dir(output_dir)
+
+    collect_hisat_index(output_dir)
+    collect_genome_rtf(output_dir)
+    collect_human_genome_file(output_dir)
+
+    fasta_processing(output_dir)
+
+    genome_hisat2 = "Data/genome/HiSat2/Homo_sapiens/GRCh38.92"
+    gtf_file = "Data/genome/Homo_sapiens.GRCh38.92.gtf"
+    genome_fasta = "Data/genome/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa"
+    # Return the three variables in a list for further use.
+    return [genome_hisat2, gtf_file, genome_fasta]
 
 
+# MAIN
 def main():
-    """main function"""
-    outputDir = ''
-    execute(outputDir)
-
+    """Main function to test functionality of the module"""
+    output_dir = ''
+    genome_hisat2, gtf_file, genome_fasta = collect_all_genome_info(output_dir)
     return 0
 
 

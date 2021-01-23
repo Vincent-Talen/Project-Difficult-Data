@@ -4,42 +4,38 @@
 Execute quality check for every fastq.gz file from the input directory.
 Put the reports into the given output directory.
 Containing a zip and html file.
-
-Fastqc function needs 3 parameters:
-fastq_dir = Input directory with the raw data.
-fastqc_dir = Output directory for the reports.
-threads = The number of files to process.
 """
 
 
-__author__ = "Rob Meulenkamp"
+__author__ = "Rob Meulenkamp and Vincent Talen"
 __status__ = "Development"
-__date__ = "02-12-2020"
-__version__ = "v0.2"
+__date__ = "22-01-2021"
+__version__ = "v0.2.3"
 
 
-import subprocess
 import sys
+from subprocess import run
 
 
-def fastqc(fastq_dir, fastqc_dir, threads):
-    """Performs the fastqc tool for all the fastq.gz files."""
+def perform_fastqc(input_dir, output_dir, threads):
+    """Performs the fastqc tool for all the fastq.gz files in the given input directory.
 
-    query = 'fastqc --casava {}*fastq.gz -o={} -t {}'.format(fastq_dir, fastqc_dir, threads)
+    :param input_dir: Input directory with the raw data.
+    :param output_dir: Output directory for the reports.
+    :param threads: The number of files to process.
+    """
+    if not input_dir.endswith("/"):
+        input_dir += "/"
+    fastqc_out = f"{output_dir}/Results/fastQC/"
 
-    subprocess.run(query, shell=True)
-
-    return 0
+    query = ["fastqc", f"{input_dir}*fastq.gz", f"-o={fastqc_out}/" "-t", threads]
+    run(query)
 
 
 def main():
-    """execute the programm"""
-    #Temporary variables
-    fastq_dir = ""
-    fastqc_dir = ""
-    threads = ""
-    fastqc(fastq_dir, fastqc_dir, threads)
-
+    """Main function to test module functionality"""
+    input_dir, output_dir, threads = "" * 3
+    perform_fastqc(input_dir, output_dir, threads)
     return 0
 
 

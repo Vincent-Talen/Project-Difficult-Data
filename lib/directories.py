@@ -1,84 +1,73 @@
 #!/usr/bin/env python3
 
 """
-This python script creates several directories for the other python scripts to use.
-Before creating the directories it checks if they already exist.
-There is a directory for the preprocessing, a directory for the data and a directory for the results.
-For the main function createAllDirs to be called, an output directory must be given as an argument.
+This module creates several directories for the rest of the pipeline to use.
+Before creating the directories it checks if they already exist and if they do it deletes all files.
+There are directories for preprocessing, data and results.
 """
 
 # METADATA VARIABLES
-__author__ = "Joost Numan"
+__author__ = "Vincent Talen"
 __status__ = "Development"
-__date__ = "12-01-2021"
-__version__ = "v0.2"
+__date__ = "22-01-2021"
+__version__ = "v0.3.1"
 
 # IMPORTS
 import os
+import sys
+from subprocess import run
 
 
-# FUNCTIONS
-def build_outputdir(outputdir):
+class CreateDirs:
     """
-    Check if the output directory already exists, otherwise create it.
+    Class to create wanted directories, only takes an output directory
+    where everything needs to be made as an argument
     """
-    if not os.path.exists(outputdir):
-        os.makedirs(outputdir)
+    def __init__(self, output_dir):
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+        self.output_dir = output_dir
+
+        if len(os.listdir(output_dir)) > 0:
+            choice = input("The output directory is not empty, do you want to proceed and "
+                           "delete everything from it? [Y/N]: ").upper()
+            if choice == "Y":
+                run(["rm", "-rf", f"{output_dir}/*"])
+            else:
+                sys.exit("You chose not to empty the given output directory "
+                         "so the pipeline has been terminated")
+
+        # Automatically create all directories
+        self.create_dirs(self.all_dirs())
+
+    @staticmethod
+    def all_dirs():
+        """Generates the dictionary with all the directories that need to be made"""
+        preprocessing_dirs = ["trimmed", "aligned", "sortedBam", "addOrReplace",
+                              "mergeSam", "markDuplicates", "toolLogs"]
+        result_dirs = ["alignment", "fastQC", "multiQC", "finalPDF"]
+        data_dirs = ["fastqFiles", "counts", "genome", "genome/hisat2"]
+
+        dir_dict = {"Preprocessing": preprocessing_dirs, "Results": result_dirs, "Data": data_dirs}
+        return dir_dict
+
+    def create_dirs(self, dir_dict):
+        """
+        This method creates all the directories from a dictionary.
+
+        :param dir_dict: A dictionary with pairs like main_dir: sub_dir_list
+        """
+        for main_dir, sub_dirs in dir_dict.items():
+            for sub_dir in sub_dirs:
+                os.makedirs(f"{self.output_dir}/{main_dir}/{sub_dir}")
 
 
-def extend_outputdir(outputdir):
-    """
-    Check if the preprocessing folder already exists, if this is not the
-    case. Create this directory.
-    Add timmed, aligned, sortedBam, addOrReplace, mergeSam and markDuplicates folders
-    """
-    if not os.path.exists(outputdir + "/Preprocessing/"):
-        os.makedirs(outputdir + "/Preprocessing/")
-        os.makedirs(outputdir + "/Preprocessing/trimmed")
-        os.makedirs(outputdir + "/Preprocessing/aligned")
-        os.makedirs(outputdir + "/Preprocessing/sortedBam")
-        os.makedirs(outputdir + "/Preprocessing/addOrReplace")
-        os.makedirs(outputdir + "/Preprocessing/mergeSam")
-        os.makedirs(outputdir + "/Preprocessing/markDuplicates")
-        os.makedirs(outputdir + "/Preprocessing/toolLogs")
-
-
-def create_resultdir(outputdir):
-    """
-    Check if the results directory exists, otherwise create it.
-    Add alignment, fastQC, multiQC and finalPDF folders.
-    """
-    if not os.path.exists(outputdir + "/Results/"):
-        os.makedirs(outputdir + "/Results/")
-        os.makedirs(outputdir + "/Results/alignment")
-        os.makedirs(outputdir + "/Results/fastQC")
-        os.makedirs(outputdir + "/Results/multiQC")
-        os.makedirs(outputdir + "/Results/finalPDF")
-
-
-def create_datadir(outputdir):
-    """
-    Check if the Data directory exists, otherwise create it.
-    Add fastqfiles and counts folders.
-    """
-    if not os.path.exists(outputdir + "/Data/"):
-        os.makedirs(outputdir + "/Data/")
-        os.makedirs(outputdir + "/Data/fastqFiles")
-        os.makedirs(outputdir + "/Data/counts")
-        os.makedirs(outputdir + "/Data/genome")
-        os.makedirs(outputdir + "/Data/genome/hisat2")
-
-
-def create_alldirs(outputdir):
-    """
-    Main function to create all directories
-    """
-    build_outputdir(outputdir)
-    extend_outputdir(outputdir)
-    create_resultdir(outputdir)
-    create_datadir(outputdir)
+# MAIN
+def main():
+    """Main function to test functionality of the module"""
+    directory = "output"
+    CreateDirs(directory)
 
 
 if __name__ == "__main__":
-    DIRECTORY = "./"
-    create_alldirs(DIRECTORY)
+    sys.exit(main())
