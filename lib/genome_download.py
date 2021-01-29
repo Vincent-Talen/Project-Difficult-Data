@@ -1,142 +1,116 @@
 #!/usr/bin/env python3
 
 """
-This module will check if the required genome data files are present in the output directory
-and if they aren't it will download them.
-The fasta file will also be
+This module will download all the required genome reference and data files and unpack them.
+From the fasta reference file a dictionary and an index file about it will also be made.
 """
 
 # METADATA VARIABLES
 __author__ = "Rob Meulenkamp and Vincent Talen"
 __status__ = "Development"
-__date__ = "15-01-2021"
-__version__ = "v0.4.4"
+__date__ = "28-01-2021"
+__version__ = "v0.5.4"
 
 # IMPORTS
-import sys
 import os
-import subprocess as sub
+import sys
+from subprocess import run
+import lib.general_functions as gen_func
 
 
-# FUNCTIONS
-def fix_output_dir(output_dir):
-    """
-    This is a small function that puts the output directory in the correct format
+class DownloadGenomeInfo:
+    def __init__(self, output_dir):
+        """
+        Constructor for the DownloadGenomeInfo class
 
-    :param output_dir: The output_dir the files need to be put in
-    :result: The output directory that is in the correct format
-    """
-    if output_dir.startswith("/"):
-        output_dir = output_dir[1:]
+        :param output_dir: The directory the user gave for all the output files to be saved in
+        """
+        self.output_dir = output_dir
+        if self.output_dir.startswith("/"):
+            self.output_dir = self.output_dir[1:]
+        self.genome_dir = f"{self.output_dir}/Data/genome"
+        self.tool_dir = f"{self.output_dir}/tool_logs/genome_download"
 
-    # Add the suffix this module needs
-    output_dir += "/genome/"
-    return output_dir
+    def collect_hisat_index(self):
+        """
+        This function downloads the HISAT index if it does not exist yet and removes compression.
+        """
+        hisat_query = ["wget", "-c", "-O", "-",
+                       "https://genome-idx.s3.amazonaws.com/hisat/grch38_genome.tar.gz"]
+        exe_hisat = run(hisat_query, capture_output=True)
 
+        unzip_query = ["tar", "-xz", "-C", self.genome_dir]
+        run(unzip_query, input=exe_hisat.stdout)
 
-def collect_hisat_index(output_dir):
-    """
-    This function downloads the HISAT index if it does not exist yet and removes compression.
+        with open(f"{self.tool_dir}/hisat_download_log.txt", "w") as opened_log_file:
+            opened_log_file.write(exe_hisat.stderr.decode('UTF-8'))
 
-    :param output_dir: The output directory where the file needs to be saved
-    """
-    hisat_dir = output_dir + 'hisat2'
-    hisat_file_name = f"{hisat_dir}/grch38_genome.tar.gz"
+    def download_and_unzip(self, link, filename, log_name):
+        """
+        This function will check if the genome rtf file is existent and otherwise download it.
+        """
+        dir_gtf_file = f"{self.genome_dir}/{filename}"
 
-    query = ["wget", "-c", "-O", "-",
-             "https://genome-idx.s3.amazonaws.com/hisat/grch38_genome.tar.gz",
-             "|", "tar", "-x", "-C", hisat_dir]
-    if not os.path.isfile(hisat_file_name):
-        sub.run(query)
+        download_query = ["wget", link, "-P", self.genome_dir]
+        exe_down = run(download_query, capture_output=True, text=True)
 
+        unzip_query = ["gunzip", dir_gtf_file]
+        exe_unzip = run(unzip_query, capture_output=True, text=True)
 
-def collect_human_genome_file(output_dir):
-    """
-    This function downloads the human genome fasta reference file and removes compression.
+        with open(f"{self.tool_dir}/{log_name}_log.txt", "w") as opened_log_file:
+            opened_log_file.writelines([exe_down.stdout, exe_down.stderr,
+                                        exe_unzip.stdout, exe_unzip.stderr])
 
-    :param output_dir: The output directory where the file needs to be saved
-    """
-    dir_fa_file = '{}Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz'.format(output_dir)
+    def process_fasta(self):
+        """
+        Creates the fasta dictionary and fai files with the Picard tool.
+        """
+        picard_tool = "lib/Picard_2.23.9/picard.jar"
+        dict_file_name = "Homo_sapiens.GRCh38.dna.primary_assembly.dict"
+        fa_file_name = f"{self.genome_dir}/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 
-    query = ["wget", "ftp://ftp.ensembl.org/pub/release-84/fasta/homo_sapiens/dna/"
-                     "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz", "-P", output_dir]
-    query_2 = ["gunzip", dir_fa_file]
-    if not os.path.isfile(dir_fa_file):
-        sub.run(query)
-        sub.run(query_2)
+        query_dict = ["java", "-jar", picard_tool, "CreateSequenceDictionary",
+                      "-R", fa_file_name, "-O", f"{self.genome_dir}/{dict_file_name}"]
+        exe_dict = run(query_dict, capture_output=True, text=True)
+        gen_func.save_tool_log(exe_dict, f"{self.tool_dir}/dict_log.txt")
 
+        query_fai = ["samtools", "faidx", fa_file_name]
+        exe_fai = run(query_fai, capture_output=True, text=True)
+        gen_func.save_tool_log(exe_fai, f"{self.tool_dir}/fai_log.txt")
 
-def collect_genome_rtf(output_dir):
-    """
-    This function will check if the genome rtf file is existent and otherwise download it.
+    def collect_all_genome_info(self, keep_genome):
+        """
+        This function this is the function that can be called
+        to collect all the genome data with other the other functions.
 
-    :param output_dir: The output directory where the file needs to be saved
-    """
-    dir_gtf_file = f"{output_dir}Homo_sapiens.GRCh38.84.gtf.gz"
+        :param keep_genome: False or True, decides if all the genome files need to be downloaded
+        """
+        if not keep_genome:
+            print("\tNow downloading the Hisat genome index")
+            self.collect_hisat_index()
 
-    query = ["wget", "ftp://ftp.ensembl.org/pub/release-84/gtf/homo_sapiens/"
-                     "Homo_sapiens.GRCh38.84.gtf.gz", "-P", output_dir]
-    query_2 = ["gunzip", dir_gtf_file]
+            print("\tFinished downloading the Hisat genome index. Now downloading annotation file")
+            self.download_and_unzip("ftp://ftp.ensembl.org/pub/release-84/gtf/homo_sapiens/"
+                                    "Homo_sapiens.GRCh38.84.gtf.gz", "Homo_sapiens.GRCh38.84.gtf.gz",
+                                    "gtf_download")
 
-    if not os.path.isfile(dir_gtf_file):
-        sub.run(query)
-        sub.run(query_2)
+            print("\tFinished downloading annotation file. Now downloading human reference file")
+            self.download_and_unzip("ftp://ftp.ensembl.org/pub/release-84/fasta/homo_sapiens/"
+                                    "dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+                                    "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+                                    "reference_download")
 
+            print("\tFinished downloading human reference file. Creating fasta dictionary now.")
+            self.process_fasta()
 
-def fasta_processing(output_dir):
-    """
-    Creates the fasta dictionary and fai files with the Picard tool.
-
-    :param output_dir: The output directory where the file needs to be saved
-    """
-    file_name_dict = "Homo_sapiens.GRCh38.dna.primary_assembly.dict"
-    file_name_fai = "Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai"
-    dir_fa_file = f"{output_dir}Homo_sapiens.GRCh38.dna.primary_assembly.fa"
-    picard_tool = "lib/Picard_2.23.9/picard.jar"
-
-    query_dict = ["java", "-jar", picard_tool, "CreateSequenceDictionary",
-                  f"R={dir_fa_file}", f"O={output_dir}{file_name_dict}"]
-    query_fai = ["samtools", "faidx", dir_fa_file]
-
-    # It is determined if the fasta.dict has been created already
-    if not os.path.isfile(output_dir + file_name_dict):
-        # If this is not the case, the file will be created
-        sub.run(query_dict)
-
-    # It is determined if the fasta.fa.fai has been created already
-    if not os.path.isfile(output_dir + file_name_fai):
-        # If this is not the case, the file will be created
-        sub.run(query_fai)
-
-
-def collect_all_genome_info(output_dir):
-    """
-    This function this is the function that can be called
-    to collect all the genome data with other the other functions.
-
-    :param output_dir: The output directory where the file needs to be saved
-    :return: A list with the names of the three files
-    """
-    output_dir = fix_output_dir(output_dir)
-
-    collect_hisat_index(output_dir)
-    collect_genome_rtf(output_dir)
-    collect_human_genome_file(output_dir)
-
-    fasta_processing(output_dir)
-
-    genome_hisat2 = "Data/genome/HiSat2/Homo_sapiens/GRCh38.92"
-    gtf_file = "Data/genome/Homo_sapiens.GRCh38.92.gtf"
-    genome_fasta = "Data/genome/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa"
-    # Return the three variables in a list for further use.
-    return [genome_hisat2, gtf_file, genome_fasta]
+            print("Done with downloading and processing all genome files.")
 
 
 # MAIN
 def main():
     """Main function to test functionality of the module"""
-    output_dir = ''
-    genome_hisat2, gtf_file, genome_fasta = collect_all_genome_info(output_dir)
+    output_dir = "../../../students/2020-2021/Thema06/groepje3/temp"
+    DownloadGenomeInfo(output_dir)
     return 0
 
 

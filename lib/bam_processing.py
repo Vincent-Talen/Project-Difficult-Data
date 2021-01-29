@@ -11,28 +11,31 @@ To use simply import the BamProcessing class and create an object with it with t
 # METADATA VARIABLES
 __author__ = "Vincent Talen"
 __status__ = "Development"
-__date__ = "15-12-2020"
-__version__ = "v0.4.3"
+__date__ = "28-12-2020"
+__version__ = "v0.4.5"
 
 # IMPORTS
 import sys
 from glob import glob
 from pathlib import Path
 from subprocess import run
-from termcolor import colored
-from concurrent.futures import ProcessPoolExecutor
+import lib.general_functions as gen_func
 
 
 class BamProcessing:
-    def __init__(self, output_dir):
+    def __init__(self, cores, output_dir):
         """
         Constructor for the PreProcess class
 
+        :param cores: The amount of cores the processes needs to use
         :param output_dir: The directory the user gave for all the output files to be saved in
         """
+        self.output_dir = output_dir
         self.working_dir = f"{output_dir}/Preprocessing"
         self.files = self.gather_files()
-        self.preprocess_files()
+
+        # Automatically perform the preprocessing
+        gen_func.process_files(cores, self.process_file, self.files)
 
     def gather_files(self):
         """
@@ -104,14 +107,14 @@ class BamProcessing:
         :param tool_name: The tool that needs to be executed
         :param query: The query used to execute the tool
         """
-        print(colored(f"\t[{current_file}] {tool_name} started.", "cyan"))  # Say the tool started
+        print(f"\t[{current_file}] {tool_name} started.")  # Say the tool started
         executed_process = run(query, capture_output=True, text=True)  # Run the tool
 
-        save_tool_dir = f"{self.working_dir}/toolLogs/{current_file}"
+        save_tool_dir = f"{self.output_dir}/tool_logs/preprocessing/{current_file}"
         save_tool_log(executed_process, f"{save_tool_dir}_{tool_name}.txt")  # Save tool logs
 
-        done_string = colored(f"[{current_file}] {tool_name} finished", "green")
-        print(f"\t{done_string} Saved logfile {current_file}_{tool_name}.txt")  # Say tool finished
+        done_string = f"[{current_file}] {tool_name} finished"
+        print(f"\t{done_string}. Saved logfile {current_file}_{tool_name}.txt")  # Say tool finished
 
     def preprocess_files(self):
         """

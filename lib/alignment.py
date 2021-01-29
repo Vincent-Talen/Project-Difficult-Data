@@ -24,40 +24,42 @@ class Alignment:
     """
     The actual alignment is performed through this class.
     The trimmed reads are obtained from the trimmed folder in the given output directory.
-    A log from the alignment is written to the Results/alignment folder and the .bam file is created
+    A log from the alignment is written to the tool_logs folder and the .bam file is created
     """
-    def __init__(self, output_dir, paired):
+    def __init__(self, cores, paired, output_dir):
         """
         Constructor that assigns the parameters to the instance variables
 
+        :param cores: The amount of cores the alignment needs to use
         :param output_dir: The path of the output directory
         :param paired: Determines if the data is single or paired
         """
-        self.output_dir = output_dir
+        self.cores = cores
         self.paired = paired
+        self.output_dir = output_dir
 
         self.threads = 1
-        self.hisat_index = output_dir + "/Data/genome/hisat2/grch38/genome"
+        self.hisat_index = output_dir + "/Data/genome/grch38/genome"
 
-    def perform_alignment(self, cores):
+        # Automatically perform the alignment
+        self.perform_alignment()
+
+    def perform_alignment(self):
         """
         Perform the alignment, it will check if the user wanted paired end and will run accordingly.
         It runs multiple processes simultaneously (multiprocessing).
-
-        :param cores: The amount of cores available on the machine or chosen by the user
         """
         file_dict = self.check_files()
-        self.threads = gen_func.calculate_threads(cores, len(file_dict.keys()))
+        self.threads = gen_func.calculate_threads(self.cores, len(file_dict.keys()))
 
         if self.paired:
             pairs, single_ended = self.create_pairs(file_dict)
-            for pair in pairs:
-                gen_func.process_files(cores, self.align_pair, pair)
+            gen_func.process_files(self.cores, self.align_pair, pairs)
             if single_ended:  # There might be left-over files that were not in pairs
-                gen_func.process_files(cores, self.align_single, single_ended)
+                gen_func.process_files(self.cores, self.align_single, single_ended)
         else:
             files = file_dict.keys()
-            gen_func.process_files(cores, self.align_single, files)
+            gen_func.process_files(self.cores, self.align_single, files)
 
     def check_files(self):
         """
@@ -136,7 +138,7 @@ class Alignment:
             file_name = Path(input_file).stem
             clean_name = Path(file_name).stem.replace("_trimmed", "")
             clean_pair.append(clean_name)
-        new_name = clean_pair.join("_")
+        new_name = "_".join(clean_pair)
 
         # Create and run the query for paired ended
         pair_query = f"hisat2 -x {self.hisat_index} -1 {pair[0]} -2 {pair[1]} " \
@@ -157,7 +159,7 @@ class Alignment:
         executed_process = run(query, shell=True, capture_output=True, text=True)
 
         # Save all logs from stdout and stderr to a logfile
-        tool_dir = f"{self.output_dir}/Results/alignment/"
+        tool_dir = f"{self.output_dir}/tool_logs/preprocessing"
         gen_func.save_tool_log(executed_process, f"{tool_dir}{log_name}_log.txt")  # Save tool log
         print(f"\t[{log_name}] Finished alignment process")
 
@@ -192,11 +194,10 @@ class Alignment:
 # MAIN
 def main():
     """Main function to test module"""
-    output_directory = "../../../students/2020-2021/Thema06/groepje3/temp/"
+    output_directory = "../../../students/2020-2021/Thema06/groepje3/temp"
     paired = True
 
-    obj = Alignment(output_directory, paired)
-    obj.perform_alignment(32)
+    Alignment(32, paired, output_directory)
     return 0
 
 

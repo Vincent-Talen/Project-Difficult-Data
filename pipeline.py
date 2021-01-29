@@ -19,15 +19,15 @@ import argparse
 from math import ceil
 from multiprocessing import cpu_count
 
-from lib.alignment import Alignment  # TODO
+from lib.alignment import Alignment
 from lib.bam_processing import BamProcessing
-from lib.count_matrix import create_count_matrix
+from lib.count_matrix import CountMatrix  # TODO
 from lib.directories import CreateDirs
-from lib.end_report import EndReport  # TODO
-from lib.genome_download import collect_all_genome_info
+# from lib.end_report import EndReport  # TODO
+from lib.genome_download import DownloadGenomeInfo
 from lib.multiqc import perform_multiqc  # TODO
-from lib.qualitycheck import perform_fastqc  # TODO
-from lib.trimmer import Trimmer  # TODO
+from lib.qualitycheck import QualityCheck
+from lib.trimmer import Trimmer
 
 
 # FUNCTIONS
@@ -40,20 +40,18 @@ def create_parser():
     # Create parser
     parser_desc = "Pipeline used for aligning and quality checking data." \
                   "Multiple reports will be generated about the quality including " \
-                  "probable explanations if quality is bad."
+                  "probable explanations why a file's quality is bad."
     parser = argparse.ArgumentParser(description=parser_desc,
                                      epilog="Thanks for using our pipeline!")
 
     # Add arguments
-    parser.add_argument("-i", "--input", required=True,
-                        help="Directory with files or file name")
-    parser.add_argument("-o", "--organism", required=True,
-                        help="The organism whose genome needs to be aligned")
-    parser.add_argument("-d", "--directory_out", required=True,
+    parser.add_argument("-i", "--input_directory", required=True,
+                        help="Directory with the files the pipeline needs to run on")
+    parser.add_argument("-o", "--output_directory", required=True,
                         help="Directory where all the files need to be saved.")
     parser.add_argument("-p", "--paired", required=False, action="store_true",
-                        help="Only use this when you want to use paired-end sequencing! "
-                             "If you don't give this argument it will use single end")
+                        help="Only use this when you want to use paired-end sequencing. "
+                             "If you don't give this argument it will process as single ended")
     parser.add_argument("-t", "--trim", required=False,
                         help="Define values to trim sequence ends with. "
                              "If you want to only trim the 3' end only give 1 integer and for"
@@ -81,49 +79,55 @@ def fix_core_count(cores):
     return cores
 
 
-def calculate_threads(cores):
-    threads = 1
-    return threads
-
-
 # MAIN
 def main():
     """Main function calling forth all tasks"""
     args = create_parser()
 
     # Preparing multiple things for pipeline functionality
-    if args.directory_out.endswith("/"):
-        output_dir = args.directory_out[:-1]
+    if args.output_directory.endswith("/"):
+        output_dir = args.output_directory[:-1]
     else:
-        output_dir = args.directory_out
+        output_dir = args.output_directory
 
-    CreateDirs(output_dir)  # Create all the directories we'll be using
+    if not args.input_directory.endswith("/"):
+        input_dir = args.input_directory + "/"
+    else:
+        input_dir = args.input_directory
+
+    # Create all the directories we'll be using
+    # create_dirs = CreateDirs(output_dir)
+    # keep_genome = create_dirs.create_all_dirs()
+
     cores = fix_core_count(args.cores)  # Determine the to be used core count
-    genome_hisat2, gtf_file, genome_fasta = collect_all_genome_info(args.directory_out)
+
+    # Download all the needed files from the internet
+    # genome_info = DownloadGenomeInfo(output_dir)
+    # genome_info.collect_all_genome_info(keep_genome)
 
     # Run FastQC tool on all files to create reports of quality
-    perform_fastqc(args.input, output_dir, calculate_threads(cores))
+    # QualityCheck(cores, input_dir, output_dir)
+
     # Trim the data. (Adapter/primer)
-    Trimmer(output_dir, args.trim)
+    # Trimmer(cores, args.trim, input_dir, output_dir)
 
     # Perform actual alignment to create BAM maps (with genomeHiSat2)
-    align_obj = Alignment(output_dir, genome_hisat2, calculate_threads(cores), args.paired)
-    align_obj.perform_alignment()
+    # Alignment(cores, args.paired, output_dir)
     # Preprocess all the mapped data
-    BamProcessing(output_dir)
+    # BamProcessing(cores, output_dir)
 
     # With the final sorted bam alignment and genome annotation create a matrix (featureCounts)
     #   - Creates a txt file with the gene counts
-    create_count_matrix(args.directory_out)
+    CountMatrix(cores, output_dir)
     # Run the MultiQC creating a HTML report with bam alignment and log files
-    perform_multiqc(args.directory_out)
+    perform_multiqc(output_dir)
 
     # Look for the bad qualities and create a PDF with
     #   the (possible) explanations why the quality is bad
     #   if all qualities are good say this too
-    EndReport(args.directory_out)
+    # EndReport(args.directory_out)
 
-    print(f"Pipeline finished, output created in '{args.directory_out}'")
+    print(f"Pipeline finished, output created in '{output_dir}'")
     return 0
 
 

@@ -11,28 +11,37 @@ The results will be written to the outputdirectory/Results/multiQC directory
 # METADATA VARIABLES
 __author__ = "Joost Numan"
 __status__ = "Development"
-__date__ = "09-12-2020"
-__version__ = "v0.2.1"
+__date__ = "29-01-2021"
+__version__ = "v0.3.2"
 
 
 # IMPORTS
 import sys
-import subprocess
+from subprocess import run
+import lib.general_functions as gen_func
 
 
 # FUNCTIONS
-def perform_multiqc(outputdir):
+def perform_multiqc(output_dir):
     """
     this function creates a query for running the multiQC tool
-    the query is run in the terminal by using subprocess.run()
+    the query is run in the terminal by using the library subprocess
+    the log from the multiQC tool is captured
+
+    :param :output_dir is the directory for the output
     """
-    query = "multiqc {} -o {}/Results/multiQC".format(outputdir, outputdir)
-    subprocess.run(query.split())
+    print("Starting MultiQC")
+    query = ["multiqc", output_dir, "--pdf", "-o", f"{output_dir}/Results/multiQC"]
+    executed_process = run(query, capture_output=True, text=True)
+
+    # Save all logs from stdout and stderr to a logfile
+    gen_func.save_tool_log(executed_process, f"{output_dir}/tool_logs/multiQC_log.txt")
+    print("Finished MultiQC")
 
 
 # MAIN
 def main():
-    """Main function calling forth all tasks"""
+    """Main function to test module"""
     perform_multiqc(".")
 
 
