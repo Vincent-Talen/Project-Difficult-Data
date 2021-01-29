@@ -60,6 +60,7 @@ class CreateDirs:
                                    "pipeline has been run before and you have not changed anything "
                                    "in the Data/genome directory.\n\t[Y/N]: ").upper()
                     if choice == "Y":
+                        print()
                         return False
                     else:
                         run(["rm", "-r", f"{self.output_dir}/Data/genome"])
