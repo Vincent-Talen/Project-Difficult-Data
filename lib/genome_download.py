@@ -8,17 +8,19 @@ From the fasta reference file a dictionary and an index file about it will also 
 # METADATA VARIABLES
 __author__ = "Rob Meulenkamp and Vincent Talen"
 __status__ = "Development"
-__date__ = "28-01-2021"
-__version__ = "v0.5.4"
+__date__ = "29-01-2021"
+__version__ = "v0.6"
 
 # IMPORTS
-import os
 import sys
 from subprocess import run
 import lib.general_functions as gen_func
 
 
 class DownloadGenomeInfo:
+    """
+    Class for downloading required files about the human genome.
+    """
     def __init__(self, output_dir):
         """
         Constructor for the DownloadGenomeInfo class
@@ -42,7 +44,7 @@ class DownloadGenomeInfo:
         unzip_query = ["tar", "-xz", "-C", self.genome_dir]
         run(unzip_query, input=exe_hisat.stdout)
 
-        with open(f"{self.tool_dir}/hisat_download_log.txt", "w") as opened_log_file:
+        with open(f"{self.tool_dir}/hisat_download.log", "w") as opened_log_file:
             opened_log_file.write(exe_hisat.stderr.decode('UTF-8'))
 
     def download_and_unzip(self, link, filename, log_name):
@@ -57,7 +59,7 @@ class DownloadGenomeInfo:
         unzip_query = ["gunzip", dir_gtf_file]
         exe_unzip = run(unzip_query, capture_output=True, text=True)
 
-        with open(f"{self.tool_dir}/{log_name}_log.txt", "w") as opened_log_file:
+        with open(f"{self.tool_dir}/{log_name}.log", "w") as opened_log_file:
             opened_log_file.writelines([exe_down.stdout, exe_down.stderr,
                                         exe_unzip.stdout, exe_unzip.stderr])
 
@@ -72,38 +74,35 @@ class DownloadGenomeInfo:
         query_dict = ["java", "-jar", picard_tool, "CreateSequenceDictionary",
                       "-R", fa_file_name, "-O", f"{self.genome_dir}/{dict_file_name}"]
         exe_dict = run(query_dict, capture_output=True, text=True)
-        gen_func.save_tool_log(exe_dict, f"{self.tool_dir}/dict_log.txt")
+        gen_func.save_tool_log(exe_dict, f"{self.tool_dir}/create_dict_file.log")
 
         query_fai = ["samtools", "faidx", fa_file_name]
         exe_fai = run(query_fai, capture_output=True, text=True)
-        gen_func.save_tool_log(exe_fai, f"{self.tool_dir}/fai_log.txt")
+        gen_func.save_tool_log(exe_fai, f"{self.tool_dir}/create_fai_file.log")
 
-    def collect_all_genome_info(self, keep_genome):
+    def collect_all_genome_info(self):
         """
         This function this is the function that can be called
         to collect all the genome data with other the other functions.
-
-        :param keep_genome: False or True, decides if all the genome files need to be downloaded
         """
-        if not keep_genome:
-            print("\tNow downloading the Hisat genome index")
-            self.collect_hisat_index()
+        print("\tNow downloading the Hisat genome index")
+        self.collect_hisat_index()
 
-            print("\tFinished downloading the Hisat genome index. Now downloading annotation file")
-            self.download_and_unzip("ftp://ftp.ensembl.org/pub/release-84/gtf/homo_sapiens/"
-                                    "Homo_sapiens.GRCh38.84.gtf.gz", "Homo_sapiens.GRCh38.84.gtf.gz",
-                                    "gtf_download")
+        print("\tFinished downloading the Hisat genome index. Now downloading annotation file")
+        self.download_and_unzip("ftp://ftp.ensembl.org/pub/release-84/gtf/homo_sapiens/"
+                                "Homo_sapiens.GRCh38.84.gtf.gz", "Homo_sapiens.GRCh38.84.gtf.gz",
+                                "gtf_download")
 
-            print("\tFinished downloading annotation file. Now downloading human reference file")
-            self.download_and_unzip("ftp://ftp.ensembl.org/pub/release-84/fasta/homo_sapiens/"
-                                    "dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
-                                    "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
-                                    "reference_download")
+        print("\tFinished downloading annotation file. Now downloading human reference file")
+        self.download_and_unzip("ftp://ftp.ensembl.org/pub/release-84/fasta/homo_sapiens/"
+                                "dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+                                "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+                                "reference_download")
 
-            print("\tFinished downloading human reference file. Creating fasta dictionary now.")
-            self.process_fasta()
+        print("\tFinished downloading human reference file. Creating fasta dictionary now.")
+        self.process_fasta()
 
-            print("Done with downloading and processing all genome files.")
+        print("\tFinished making fasta dictionary")
 
 
 # MAIN

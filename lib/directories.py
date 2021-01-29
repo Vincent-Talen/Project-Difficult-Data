@@ -9,8 +9,8 @@ There are directories for preprocessing, data and results.
 # METADATA VARIABLES
 __author__ = "Vincent Talen and Joost Numan"
 __status__ = "Development"
-__date__ = "28-01-2021"
-__version__ = "v0.3.5"
+__date__ = "29-01-2021"
+__version__ = "v0.3.6"
 
 # IMPORTS
 import os
@@ -33,16 +33,19 @@ class CreateDirs:
             os.makedirs(output_dir)
         self.output_dir = output_dir
 
-        self.keep_genome = self.check_empty()
+        self.download_genome = self.check_empty()
 
     def check_empty(self):
         """
+        Checks if there already files in the genome directory and if there are ask the user
+        if they want to download them again.
 
-        :return: keep_genome; False or True if the user wants to keep genome files
+        :return: download_genome; Returns True by default or False if files have been found
+                                  and user wants to use the existing ones
         """
         if len(os.listdir(self.output_dir)) > 0:
-            choice = input("The output directory is not empty, do you want to proceed and "
-                           "delete everything from it? [Y/N]:\n").upper()
+            choice = input("\tThe output directory is not empty, do you want to proceed and "
+                           "delete everything from it?\n\t[Y/N]: ").upper()
             if choice == "Y":
                 remove_dirs = ["Preprocessing", "Results", "tool_logs",
                                "Data/fastqFiles", "Data/counts"]
@@ -51,14 +54,17 @@ class CreateDirs:
                         run(["rm", "-r", f"{self.output_dir}/{directory}"])
 
                 if len(os.listdir(f"{self.output_dir}/Data/genome")) > 0:
-                    choice = input("It appears you still have some genome reference files, "
-                                   "do you want to download them again? "
-                                   "(If you answer no, you should have ran this pipeline before "
-                                   "and not changed anything in the /Data/genome directory) "
-                                   "[Y/N]:\n").upper()  # TODO
+                    choice = input("\tIt appears you still have some genome reference files, "
+                                   "do you want to keep the existing ones?\n\t"
+                                   "(If you don't want to download them (again) make sure that the "
+                                   "pipeline has been run before and you have not changed anything "
+                                   "in the Data/genome directory.\n\t[Y/N]: ").upper()
                     if choice == "Y":
-                        run(["rm", "-r", f"{self.output_dir}/Data/genome"])
                         return False
+                    else:
+                        run(["rm", "-r", f"{self.output_dir}/Data/genome"])
+                        print()
+                        return True
             else:
                 sys.exit("You chose not to empty the given output directory "
                          "so the pipeline has been terminated")
@@ -73,8 +79,8 @@ class CreateDirs:
         """
         preprocessing_dirs = ["trimmed", "aligned", "sortedBam", "addOrReplace",
                               "mergeSam", "markDuplicates"]
-        result_dirs = ["fastQC", "multiQC", "finalPDF"]
-        data_dirs = ["fastqFiles", "counts"]
+        result_dirs = ["fastQC", "multiQC"]
+        data_dirs = ["counts"]
         if not os.path.isdir(f"{self.output_dir}/Data/genome"):
             data_dirs.append("genome")
         log_dirs = ["preprocessing", "genome_download", "qualitycheck"]
@@ -89,7 +95,7 @@ class CreateDirs:
         for main_dir, sub_dirs in dir_dict.items():
             for sub_dir in sub_dirs:
                 os.makedirs(f"{self.output_dir}/{main_dir}/{sub_dir}")
-        return self.keep_genome
+        return self.download_genome
 
 
 # MAIN
@@ -97,7 +103,7 @@ def main():
     """Main function to test functionality of the module"""
     directory = "output"
     create_dirs = CreateDirs(directory)
-    keep_genome = create_dirs.create_all_dirs()
+    create_dirs.create_all_dirs()
 
 
 if __name__ == "__main__":

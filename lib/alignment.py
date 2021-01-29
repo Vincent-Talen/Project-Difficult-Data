@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 """
-Performs the alignment via the hisat tool and converts output to a bam file using samtools view.
+Performs the alignment via the Hisat2 tool and converts output to a bam file using samtools view.
 """
 
 # METADATA VARIABLES
 __author__ = "Vincent Talen and Joost Numan"
 __status__ = "Development"
-__date__ = "27-01-2020"
-__version__ = "v0.7.5"
+__date__ = "29-01-2020"
+__version__ = "v0.8"
 
 
 # IMPORTS
@@ -26,40 +26,37 @@ class Alignment:
     The trimmed reads are obtained from the trimmed folder in the given output directory.
     A log from the alignment is written to the tool_logs folder and the .bam file is created
     """
-    def __init__(self, cores, paired, output_dir):
+    def __init__(self, paired, output_dir):
         """
         Constructor that assigns the parameters to the instance variables
 
-        :param cores: The amount of cores the alignment needs to use
         :param output_dir: The path of the output directory
         :param paired: Determines if the data is single or paired
         """
-        self.cores = cores
         self.paired = paired
         self.output_dir = output_dir
 
         self.threads = 1
-        self.hisat_index = output_dir + "/Data/genome/grch38/genome"
+        self.hisat_index = f"{output_dir}/Data/genome/grch38/genome"
 
-        # Automatically perform the alignment
-        self.perform_alignment()
-
-    def perform_alignment(self):
+    def perform_alignment(self, cores):
         """
         Perform the alignment, it will check if the user wanted paired end and will run accordingly.
         It runs multiple processes simultaneously (multiprocessing).
+
+        :param cores: The amount of cores the alignment needs to use
         """
         file_dict = self.check_files()
-        self.threads = gen_func.calculate_threads(self.cores, len(file_dict.keys()))
+        self.threads = gen_func.calculate_threads(cores, len(file_dict.keys()))
 
         if self.paired:
             pairs, single_ended = self.create_pairs(file_dict)
-            gen_func.process_files(self.cores, self.align_pair, pairs)
+            gen_func.process_files(cores, self.align_pair, pairs)
             if single_ended:  # There might be left-over files that were not in pairs
-                gen_func.process_files(self.cores, self.align_single, single_ended)
+                gen_func.process_files(cores, self.align_single, single_ended)
         else:
             files = file_dict.keys()
-            gen_func.process_files(self.cores, self.align_single, files)
+            gen_func.process_files(cores, self.align_single, files)
 
     def check_files(self):
         """
@@ -106,7 +103,7 @@ class Alignment:
                         pairs.append([file_name, found_paired_file])
                     else:
                         single_ended.append(file_name)
-                        print(f"[INFO] File {file_name} was paired but the paired complementary "
+                        print(f"\t[INFO] File {file_name} was paired but the complementary "
                               f"file could not be found so it was aligned as singled ended")
             else:
                 # If there isn't an identifier indicating the file is paired add it to single_ended
@@ -120,11 +117,11 @@ class Alignment:
         :param file: The file the alignment needs to be performed on.
         """
         file_name = Path(file).stem
-        new_name = Path(file_name).stem.replace("_trimmed", "_aligned") + ".bam"
+        new_name = Path(file_name).stem.replace("_trimmed", "_aligned")
 
         single_query = f"hisat2 -x {self.hisat_index} -U {file} -p {str(self.threads)} | " \
-                       f"samtools view -b -o {self.output_dir}/Preprocessing/aligned/{new_name}"
-        self.align(single_query, file_name)
+                       f"samtools view -b -o {self.output_dir}/Preprocessing/aligned/{new_name}.bam"
+        self.align(single_query, new_name)
 
     def align_pair(self, pair):
         """
@@ -138,13 +135,14 @@ class Alignment:
             file_name = Path(input_file).stem
             clean_name = Path(file_name).stem.replace("_trimmed", "")
             clean_pair.append(clean_name)
-        new_name = "_".join(clean_pair)
+        clean_name = "_".join(clean_pair)
+        new_name = clean_name + "_aligned"
 
         # Create and run the query for paired ended
         pair_query = f"hisat2 -x {self.hisat_index} -1 {pair[0]} -2 {pair[1]} " \
                      f"-p {str(self.threads)} | samtools view -b " \
                      f"-o {self.output_dir}/Preprocessing/aligned/{new_name}.bam"
-        self.align(pair_query, new_name)
+        self.align(pair_query, clean_name)
 
     def align(self, query, log_name):
         """
@@ -155,13 +153,13 @@ class Alignment:
         :param log_name: The basename of the file that the alignment is getting done on
         """
         # Run the hisat too and samtools view query and save the log file after
-        print(f"\t[{log_name}] Starting alignment process")
+        gen_func.print_tool(log_name, "s", "alignment process")
         executed_process = run(query, shell=True, capture_output=True, text=True)
 
         # Save all logs from stdout and stderr to a logfile
         tool_dir = f"{self.output_dir}/tool_logs/preprocessing"
-        gen_func.save_tool_log(executed_process, f"{tool_dir}{log_name}_log.txt")  # Save tool log
-        print(f"\t[{log_name}] Finished alignment process")
+        gen_func.save_tool_log(executed_process, f"{tool_dir}/{log_name}_alignment.log")
+        gen_func.print_tool(log_name, "f", "alignment process")
 
     @staticmethod
     def _find_pair(dictionary, mate_name, w_full_tag):
@@ -197,7 +195,8 @@ def main():
     output_directory = "../../../students/2020-2021/Thema06/groepje3/temp"
     paired = True
 
-    Alignment(32, paired, output_directory)
+    align = Alignment(paired, output_directory)
+    align.perform_alignment(32)
     return 0
 
 

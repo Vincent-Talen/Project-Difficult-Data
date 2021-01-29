@@ -1,31 +1,35 @@
 # Alignment pipeline for sequenced data
 **Authors:** M. Hagen, R. Meulenkamp, J. Numan, V. Talen and R. Visser  
-**Date:** 02 december 2020  
-**Version:** v0.1
+**Date:** 29 January 2021  
+**Version:** v0.2
+
+With this pipeline you can align and check the qualities of fastq.gz files.
+The end product is a multiQC pdf file where a summary about the input files can be read.
 
 ## Installation
-To use this pipeline a few things will have to be prepared before running it, 
-there are some tools and files required to be installed on the system the pipeline will be run on.
+To use this pipeline a few things will have to be prepared before running it.  
+The first thing to make sure is that Python3.7 or higher should be installed, you can check by typing this into the terminal
+> $ python3 --version  
 
-#### List of tools:
-TODO: Delete the ones that don't have to be installed?
-* FastQC
-* Fastx_trimmer
-* TrimGalore
-* Picard
-* GenomeHiSat2
-* SAMTools
-* FeatureCounts
-* MultiQC
+If you do not have python3.7 or higher install it, below is the official Python website.
+> https://www.python.org/
+
+There are also some tools and packages required to be able to use the pipeline.  
+We have made them easy to install with 'setup.sh'.  
+Make sure you have access to the root of your system and simply type the following in your terminal and everything should be set.  
+> $ sh setup.sh  
 
 ## Usage
-This pipeline is to be used in the command line, it has a parser with a help.  
-A standard usecase would look like:
-> python3 align_data.py -s data
+This pipeline is to be used in the Linux command line with the working directory as the directory of this repository.  
+The pipeline has a parser with a help menu, to see this menu use:
+> $ python3.7 pipeline.py -h  
 
-You have multiple arguments where you can choose the desired values like 
-the organism, trim intensity,
+Two examples of how the pipeline can be used:
+> $ python3.7 pipeline.py -i input_directory -o output_directory -p -t 1-2 -c 8  
+
+> $ python3.7 pipeline.py -i input_directory -o output_directory  
+
 
 ## Support
-For questions, suggestions or other support related things please contact this email:  
+For questions, suggestions or other related things to this repository please contact this email:  
 *v.k.talen@st.hanze.nl*

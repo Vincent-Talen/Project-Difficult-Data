@@ -8,8 +8,8 @@ When calling the class it will automatically perform the trimming with the given
 # METADATA VARIABLES
 __author__ = "Michael Hagen, Vincent Talen and Joost Numan"
 __status__ = "Development"
-__date__ = "28-01-2021"
-__version__ = "v0.6.2"
+__date__ = "29-01-2021"
+__version__ = "v0.7"
 
 # IMPORTS
 import sys
@@ -17,16 +17,16 @@ import glob
 import re
 from pathlib import Path
 from subprocess import run
+from termcolor import colored
 import lib.general_functions as gen_func
 
 
 class Trimmer:
     """The Trimmer class is a package to trim files with. It uses multiprocessing."""
-    def __init__(self, cores, trim_values, input_dir, output_dir):
+    def __init__(self, trim_values, input_dir, output_dir):
         """
         Constructor for the Trimmer class
 
-        :param cores: The amount of cores the trimmer needs to use
         :param trim_values: None or string with "\"3-5\" (start and end) or \"3\" (end only)"
         :param input_dir: The directory with all the files you want you use the trimmer on
         :param output_dir: The directory where all the output files need to be saved in
@@ -37,7 +37,12 @@ class Trimmer:
         self.trim_values = trim_values
         self.value_type = self.check_trim_values()
 
-        # Automatically perform the trimming
+    def run_trimmer(self, cores):
+        """
+        This method actually runs the trimmer
+
+        :param cores: The amount of cores the trimmer needs to use
+        """
         gen_func.process_files(cores, self.trim_file, self.input_files)
 
     def check_trim_values(self):
@@ -60,17 +65,20 @@ class Trimmer:
         else:
             # If the trim values given were not correct
             # ask user if they want to stop or continue without trimming
-            print("[WARNING] Trim values incorrect, make sure the input is like "
+            warning = colored("WARNING", "yellow")
+            print(f"\t[{warning}] Trim values incorrect, make sure the input is like "
                   "\"3-5\" (start and end) or \"3\" (end only)")
 
-            choice = input("Do you want to continue pipeline without hard trimming file ends? "
-                           "(Not saying yes will stop pipeline) [Y/N]: ").upper()
+            choice = input("\tDo you want to continue pipeline without hard trimming file ends?\n\t"
+                           "(If you don't say yes the pipeline will stop)\n\t[Y/N]: ").upper()
             if choice == "Y":
                 value_type = 1
-                print("Continuing without hard trimming file ends!")
+                info = colored("INFO", "cyan")
+                print(f"\t[{info}] Continuing without hard trimming file ends!")
             else:
-                print("You chose not to continue without trimming the files "
-                      "so the pipeline has been terminated")
+                terminated = colored("terminated", "red")
+                print(f"You chose not to continue without trimming the files "
+                      f"so the pipeline has been {terminated}")
                 sys.exit(1)
         return value_type
 
@@ -81,8 +89,9 @@ class Trimmer:
 
         :param file: Name of the file you want to trim with directories.
         """
-        file_path = Path(file)
-        print(f"\t[{file_path.name}] Starting trimming process")
+        file_path = Path(file).stem
+        clean_name = Path(file_path).stem
+        gen_func.print_tool(clean_name, "s", "trimming process")
         trimmed_dir = f"{self.output_dir}/Preprocessing/trimmed/"
         galore_loc = "lib/TrimGalore-0.6.6/trim_galore"
 
@@ -101,17 +110,16 @@ class Trimmer:
         executed_process = run(galore_query, capture_output=True, text=True)
 
         save_tool_dir = f"{self.output_dir}/tool_logs/preprocessing"
-        gen_func.save_tool_log(executed_process,
-                               f"{save_tool_dir}/{file_path.stem}_log.txt")  # Save tool log
-        print(f"\t[{file_path.name}] Finished trimming process")
+        gen_func.save_tool_log(executed_process, f"{save_tool_dir}/{clean_name}_trimmed.log")
+        gen_func.print_tool(clean_name, "f", "trimming process")
 
 
 def main():
     """Main function to test the module"""
-    cores = 20
     in_dir = "../../../students/2020-2021/Thema06/RawFiles/"
     out_dir = "../../../students/2020-2021/Thema06/groepje3/temp"
-    Trimmer(cores, "4-5a", in_dir, out_dir)
+    trimmer = Trimmer("4-5a", in_dir, out_dir)
+    trimmer.run_trimmer(32)
     return 0
 
 

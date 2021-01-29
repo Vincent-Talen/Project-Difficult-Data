@@ -9,8 +9,8 @@ It requires the output directory and the amount of cores for multiprocessing
 # METADATA VARIABLES
 __author__ = "Joost Numan and Vincent Talen"
 __status__ = "Development"
-__date__ = "28-01-2021"
-__version__ = "v0.3.4"
+__date__ = "29-01-2021"
+__version__ = "v0.4"
 
 
 # IMPORTS
@@ -21,45 +21,30 @@ import lib.general_functions as gen_func
 
 
 # FUNCTIONS
-class CountMatrix:
+def run_feature_counts(cores, output_dir):
     """
-    The CountMatrix class runs the feature counts tool to create a count matrix file
+    This method runs the feature counts tool and captures the output
+
+    :param cores: The amount of cores the feature counts tool needs to use
+    :param output_dir: The path of the output directory
     """
-    def __init__(self, cores, output_dir):
-        """
-        Constructor that assigns the parameters to the instance variables
+    feature_count_loc = "lib/Subread-2.0.1/bin/featureCounts"
+    anno_file = f"{output_dir}/Data/genome/Homo_sapiens.GRCh38.84.gtf"
+    files = glob.glob(f"{output_dir}/Preprocessing/markDuplicates/*_sorted.bam")
 
-        :param cores: The amount of cores the feature counts tool needs to use
-        :param output_dir: The path of the output directory
-        """
-        self.cores = cores
-        self.output_dir = output_dir
+    query = [feature_count_loc, "-a", anno_file, "-T", str(cores),
+             "-o", f"{output_dir}/Data/counts/geneCounts.txt", *files]
+    executed_process = run(query, capture_output=True, text=True)
 
-        self.anno_file = output_dir + "/Data/genome/Homo_sapiens.GRCh38.84.gtf"
-
-        # Automatically run the feature counts tool
-        self.run_feature_counts()
-
-    def run_feature_counts(self):
-        """This method runs the feature counts tool and captures the output"""
-        print(f"Starting Feature Counts")
-        feature_count_loc = "lib/Subread-2.0.1/bin/featureCounts"
-        files = glob.glob(f"{self.output_dir}/Preprocessing/markDuplicates/*_sorted.bam")
-
-        query = [feature_count_loc, "-a", self.anno_file,  "-T", str(self.cores),
-                 "-o", f"{self.output_dir}/Data/counts/geneCounts.txt", *files]
-        executed_process = run(query, capture_output=True, text=True)
-
-        # Save all logs from stdout and stderr to a logfile
-        gen_func.save_tool_log(executed_process,
-                               f"{self.output_dir}/tool_logs/feature_counts_log.txt")
-        print(f"Finished Feature Counts")
+    # Save all logs from stdout and stderr to a logfile
+    log_dir = f"{output_dir}/tool_logs"
+    gen_func.save_tool_log(executed_process, f"{log_dir}/feature_counts.log")
 
 
 # MAIN
 def main():
     """Main function calling forth all tasks"""
-    CountMatrix(20, "../../../students/2020-2021/Thema06/groepje3/temp")
+    run_feature_counts(32, "../../../students/2020-2021/Thema06/groepje3/temp")
     return 0
 
 

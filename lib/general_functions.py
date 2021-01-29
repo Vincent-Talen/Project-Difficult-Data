@@ -7,12 +7,13 @@ This module contains multiple functions that can be used in other parts of the p
 # METADATA VARIABLES
 __author__ = "Vincent Talen"
 __status__ = "Development"
-__date__ = "25-01-2021"
-__version__ = "v0.1.2"
+__date__ = "29-01-2021"
+__version__ = "v0.2"
 
 # IMPORTS
 from math import floor
 from concurrent.futures import ProcessPoolExecutor
+from termcolor import colored
 
 
 # FUNCTIONS
@@ -30,7 +31,7 @@ def save_tool_log(finished_process, log_file_name):
 
 def process_files(cores, function_name, input_list):
     """
-    This method processes multiple files at once with multiprocessing.
+    This method processes multiple files at once with ProcessPoolExecutor.
     Every file gets preprocessed with the process_file method.
 
     :param cores: The amount of wanted or available cores
@@ -53,3 +54,18 @@ def calculate_threads(cores, amt_of_files):
         threads = 1
 
     return threads
+
+
+def print_tool(file_name, start_finish, text):
+    """
+    With this function the status of what is happening to a file with a tool.
+
+    :param file_name: The name of the file the tool is starting of has finished for
+    :param start_finish: 's' for starting or 'f' for finished
+    :param text: The text that needs to be printed (in color for starting and normal for finished)
+    """
+    if start_finish == "s":
+        prefix = colored("Starting", "cyan")
+    else:
+        prefix = "Finished"
+    print(f"\t[{file_name}]\t{prefix} {text}")
